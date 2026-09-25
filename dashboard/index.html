@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Longevidade no Billboard Hot 100 (1950–2025)</title>
+<meta name="description" content="Painel de apoio ao TCC 'Longevidade comercial de artistas no Billboard Hot 100 (1950–2025)' — MBA em Data Science e Analytics, USP/Esalq.">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f6f4ef;
+    --surface-1: #ffffff;
+    --surface-2: #efece4;
+    --ink: #17140f;
+    --ink-soft: #4a453c;
+    --muted: #7a7468;
+    --line: #e2dccc;
+    --line-strong: #cfc7b0;
+
+    /* categorical slots, validated palette (dataviz skill) */
+    --s-blue:    #2a78d6;
+    --s-orange:  #eb6834;
+    --s-aqua:    #1baf7a;
+    --s-yellow:  #eda100;
+    --s-magenta: #e87ba4;
+    --s-green:   #008300;
+    --s-violet:  #4a3aa7;
+    --s-red:     #e34948;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-0: #14130f;
+      --surface-1: #1c1a15;
+      --surface-2: #24211a;
+      --ink: #f5f2e9;
+      --ink-soft: #cfc9b8;
+      --muted: #9c9585;
+      --line: #332f26;
+      --line-strong: #45402f;
+      --s-blue:    #3987e5;
+      --s-orange:  #d95926;
+      --s-aqua:    #199e70;
+      --s-yellow:  #c98500;
+      --s-magenta: #d55181;
+      --s-green:   #008300;
+      --s-violet:  #9085e9;
+      --s-red:     #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #14130f;
+    --surface-1: #1c1a15;
+    --surface-2: #24211a;
+    --ink: #f5f2e9;
+    --ink-soft: #cfc9b8;
+    --muted: #9c9585;
+    --line: #332f26;
+    --line-strong: #45402f;
+    --s-blue:    #3987e5;
+    --s-orange:  #d95926;
+    --s-aqua:    #199e70;
+    --s-yellow:  #c98500;
+    --s-magenta: #d55181;
+    --s-green:   #008300;
+    --s-violet:  #9085e9;
+    --s-red:     #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  .serif { font-family: Georgia, "Times New Roman", serif; }
+
+  a { color: var(--s-blue); }
+
+  /* ---- top bar ---- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--surface-0) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .topbar img.logo-billboard { height: 22px; width: auto; display: block; }
+  .topbar-title {
+    font-size: 0.82rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  nav.tabs {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 0.82rem;
+    padding: 7px 11px;
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  nav.tabs a:hover { background: var(--surface-2); }
+  nav.tabs a.active { background: var(--ink); color: var(--surface-0); }
+  .theme-toggle {
+    border: 1px solid var(--line-strong);
+    background: var(--surface-1);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    flex: none;
+  }
+
+  /* ---- hero ---- */
+  header.hero {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 24px 8px;
+  }
+  header.hero h1 {
+    font-size: clamp(1.5rem, 3vw, 2.15rem);
+    margin: 0 0 10px;
+    line-height: 1.22;
+    max-width: 46ch;
+  }
+  header.hero p.sub {
+    color: var(--ink-soft);
+    font-size: 1rem;
+    max-width: 62ch;
+    margin: 0 0 6px;
+  }
+  header.hero p.meta {
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  header.hero p.meta a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 0 24px 40px; }
+  section { padding: 46px 0; border-top: 1px solid var(--line); scroll-margin-top: 64px; }
+  section:first-of-type { border-top: none; }
+
+  h2 {
+    font-size: 1.2rem;
+    margin: 0 0 6px;
+  }
+  h2 .eyebrow {
+    display: block;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  p.lede { color: var(--ink-soft); font-size: 0.96rem; max-width: 74ch; margin: 10px 0 22px; }
+
+  /* ---- stat cards ---- */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+    margin: 20px 0 8px;
+  }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent, var(--s-blue));
+  }
+  .card .num { font-size: 1.6rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .card .label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+  /* ---- chart wrap ---- */
+  .chart-wrap {
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 18px 14px;
+    margin-bottom: 16px;
+  }
+  .chart-wrap canvas { max-height: 340px; }
+  .chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .chart-head h3 { font-size: 0.92rem; margin: 0; }
+  .caption { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ---- segmented toggle ---- */
+  .segmented {
+    display: inline-flex;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 2px;
+    background: var(--surface-2);
+  }
+  .segmented button {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .segmented button.active { background: var(--surface-1); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.08); font-weight: 600; }
+
+  /* ---- table ---- */
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  table.data-table th, table.data-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.data-table th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  table.data-table th:hover { color: var(--ink); }
+  table.data-table th .arrow { opacity: 0.4; font-size: 0.7em; margin-left: 3px; }
+  table.data-table th.sorted .arrow { opacity: 1; }
+  table.data-table td.num, table.data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.data-table tbody tr:hover { background: var(--surface-2); }
+  table.data-table tbody tr:last-child td { border-bottom: none; }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+  .pill { font-size: 0.76rem; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+  .pill b { color: var(--ink); }
+
+  .callout {
+    background: var(--surface-2);
+    border-left: 3px solid var(--s-orange);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin: 14px 0;
+  }
+  .callout b { color: var(--ink); }
+
+  /* ---- footer ---- */
+  footer {
+    border-top: 1px solid var(--line);
+    background: var(--surface-1);
+  }
+  .footer-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 36px 24px 30px;
+  }
+  .footer-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
+  }
+  .footer-col { min-width: 200px; }
+  .footer-col h4 { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
+  .footer-col p, .footer-col a { font-size: 0.86rem; color: var(--ink-soft); }
+  .footer-links { display: flex; flex-direction: column; gap: 7px; }
+  .footer-links a { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
+  .footer-links a:hover { text-decoration: underline; }
+  .footer-logos { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .footer-logos img { height: 34px; width: auto; background: #f5f2e9; padding: 6px 10px; border-radius: 6px; }
+  .footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 0.76rem; color: var(--muted); }
+
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+
+  ::selection { background: var(--s-yellow); color: #1a1305; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <img class="logo-billboard" src="assets/logo_billboard.png" alt="Billboard Hot 100">
+    <span class="topbar-title">Longevidade comercial de artistas, 1950–2025</span>
+    <nav class="tabs" id="tabs">
+      <a href="#visao-geral">Visão geral</a>
+      <a href="#cross-geracionalidade">Cross-geracionalidade</a>
+      <a href="#carreira-hiato">Carreira &amp; hiato</a>
+      <a href="#som">Som &amp; clusters</a>
+      <a href="#previsao">Previsão</a>
+      <a href="#concentracao">Concentração</a>
+    </nav>
+    <button class="theme-toggle" id="themeToggle" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro">◐</button>
+  </div>
+</div>
+
+<header class="hero">
+  <h1 class="serif">Longevidade comercial de artistas no Billboard Hot 100 (1950–2025)</h1>
+  <p class="sub">Painel de apoio ao TCC de Maria Fernanda Pereira, MBA em Data Science e Analytics, USP/Esalq — 2026.</p>
+  <p class="meta">Base: Billboard Hot 100 Year-End × atributos de áudio do Spotify (via Sort Your Music) · 2.705 artistas · 7.101 posições · 76 anos · <a href="../">código e dados completos no repositório</a></p>
+</header>
+
+<main>
+
+<section id="visao-geral">
+  <h2><span class="eyebrow">Panorama</span>O retrato numérico do trabalho</h2>
+  <p class="lede">
+    Este painel reúne os números centrais do TCC num único lugar, para quem quer
+    explorar os resultados sem passar pelas páginas do texto completo. Ele não
+    substitui o trabalho escrito — as interpretações, ressalvas metodológicas e a
+    discussão de cada achado estão lá, com a literatura que embasa cada leitura.
+    Aqui é o retrato numérico, navegável.
+  </p>
+  <div class="cards" id="heroCards"></div>
+</section>
+
+<section id="cross-geracionalidade">
+  <h2><span class="eyebrow">Seção 1</span>Quem atravessa décadas — e quem não atravessa</h2>
+  <p class="lede">
+    De 2.705 artistas distintos identificados no Hot 100 Year-End entre 1950 e
+    2025, 501 (18,52%) tiveram hits em duas ou mais décadas-calendário
+    diferentes — o critério usado no trabalho para "cross-geracional". A
+    maioria não chega lá: a carreira típica no chart dura um único ano.
+  </p>
+  <div class="two-col">
+    <div class="chart-wrap">
+      <div class="chart-head"><h3>Cross-geracionais vs. o resto da base</h3></div>
+      <canvas id="graficoCrossGer" role="img" aria-label="Gráfico de barras: 501 artistas cross-geracionais contra 2204 artistas de uma década só"></canvas>
+      <p class="caption">Fonte: elaboração própria a partir da base Billboard Hot 100 Year-End × Spotify (SYM). Cross-geracional = hits em 2+ décadas-calendário distintas.</p>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-head"><h3>Top 10 carreiras mais longas no chart</h3></div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="tabelaTop10"></table>
+      </div>
+      <p class="caption">Perenes sazonais (Brenda Lee, Burl Ives, Wham!) excluídos do ranking — ver seção 1 do TCC. Clique num cabeçalho para reordenar.</p>
+    </div>
+  </div>
+  <div class="callout">
+    <b>Uma leitura como piso, não como valor definitivo:</b> a taxa cross-geracional
+    é condicionada à seleção pelo próprio Hot 100 e à censura de artistas recentes
+    que ainda não tiveram tempo de completar 2+ décadas no chart.
+  </div>
+</section>
+
+<section id="carreira-hiato">
+  <h2><span class="eyebrow">Seções 2 e 3</span>Carreira curta, mas com espaço para voltar</h2>
+  <p class="lede">
+    Entre o primeiro e o último hit de cada artista, a mediana é de apenas um
+    ano no chart (60,0% têm carreira de um único ano). Entre os 1.081 artistas
+    com hit em dois ou mais anos-calendário distintos, 64,5% tiveram ao menos
+    um período sem aparecer no chart antes de voltar — mediana de 2 anos de
+    hiato. Um Kaplan-Meier, tratando hiatos ainda abertos em 2025 como
+    censurados, mostra que boa parte nunca "fecha" dentro da janela observada.
+  </p>
+  <div class="chart-wrap">
+    <div class="chart-head">
+      <h3>Kaplan-Meier — probabilidade do hiato seguir aberto (sem reentrada)</h3>
+    </div>
+    <canvas id="graficoHiato" role="img" aria-label="Curva de Kaplan-Meier caindo de 100% para um platô de 69,2% em torno de 20 anos"></canvas>
+    <p class="caption">Hiatos abertos em 2025 tratados como censura (o artista ainda pode voltar, só não sabemos quando). Passe o mouse sobre a curva para ver os valores.</p>
+  </div>
+  <div class="pill-row">
+    <span class="pill">Mediana da carreira: <b>1 ano</b></span>
+    <span class="pill">Carreira mais longa: <b>Elton John, 50 anos</b></span>
+    <span class="pill">Reentrância após hiato: <b>64,5%</b></span>
+    <span class="pill">Mediana do hiato: <b>2 anos</b></span>
+    <span class="pill">Platô Kaplan-Meier (~20 anos): <b>69,2% sem reentrada</b></span>
+  </div>
+</section>
+
+<section id="som">
+  <h2><span class="eyebrow">Seção 0 e 4</span>Como soam os hits — e as famílias sonoras por trás deles</h2>
+  <p class="lede">
+    Antes de perguntar o que diferencia quem atravessa gerações, vale
+    caracterizar o que já está na base: como soam, em média, as 7.025 faixas
+    com áudio válido, e como esse perfil mudou entre vinil/rádio, CD/MTV e
+    streaming.
+  </p>
+  <div class="two-col">
+    <div class="chart-wrap">
+      <div class="chart-head"><h3>Estatísticas descritivas (n = 7.025 faixas)</h3></div>
+      <table class="data-table" id="tabelaDescritivas"></table>
+      <p class="caption">Fonte: elaboração própria a partir da base Billboard Hot 100 Year-End × Spotify (SYM).</p>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-head"><h3>Duração média do hit, por era de distribuição</h3></div>
+      <canvas id="graficoDuracao" role="img" aria-label="Duração subiu na era do CD e caiu no streaming"></canvas>
+      <p class="caption">A duração fez um formato de sino: subiu na era CD/MTV (4:19) e caiu no streaming (3:38).</p>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-head">
+      <h3 id="clusterTitle">Clusters sonoros — perfil médio de cada grupo</h3>
+      <div class="segmented" id="clusterToggle">
+        <button data-k="2" class="active">k = 2</button>
+        <button data-k="5">k = 5</button>
+      </div>
+    </div>
+    <canvas id="graficoClusters" role="img" aria-label="Radar comparando o perfil médio de audio de cada cluster"></canvas>
+    <p class="caption">
+      Seis atributos de áudio, padronizados por z-score, sobre 6.923 faixas. O silhouette médio não elege
+      um k único: máximo global em k=2 (0,286, separação fraca) e máximo local em k=5 (0,195) — os nomes de
+      "arquétipo sonoro" no TCC vêm de leitura qualitativa dos centroides, por isso não são repetidos aqui, só os números que a embasaram.
+    </p>
+  </div>
+</section>
+
+<section id="previsao">
+  <h2><span class="eyebrow">Seção 5</span>O áudio da estreia prevê a longevidade?</h2>
+  <p class="lede">
+    Um Random Forest (500 árvores) tentou prever o status cross-geracional de um
+    artista usando só o perfil de áudio do seu hit de estreia. O resultado é
+    modesto: AUC-ROC de 0,549 em validação cruzada de 5 folds (0,5 é acaso puro,
+    1,0 é previsão perfeita) — nenhuma variável se destaca isoladamente.
+  </p>
+  <div class="two-col">
+    <div class="chart-wrap">
+      <div class="chart-head"><h3>Importância das variáveis (impureza / MDI)</h3></div>
+      <canvas id="graficoImportancia" role="img" aria-label="Barras horizontais de importancia de variaveis, todas proximas entre 0,067 e 0,126"></canvas>
+      <p class="caption">Base completa, 2.644 artistas com áudio válido na estreia. Valores exatos em <code>data/resultado_05_importancia_variaveis.csv</code>.</p>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-head"><h3>AUC-ROC: quase acaso</h3></div>
+      <canvas id="graficoAUC" role="img" aria-label="Comparação de AUC-ROC entre Random Forest e arvore de decisao, ambos proximos de 0,5"></canvas>
+      <p class="caption">0,5 = acaso · 1,0 = previsão perfeita. A árvore de decisão (profundidade 3) é a versão didática do mesmo resultado.</p>
+    </div>
+  </div>
+</section>
+
+<section id="concentracao">
+  <h2><span class="eyebrow">Análise complementar</span>Poucos artistas, muitas entradas</h2>
+  <p class="lede">
+    Ordenando os artistas pelo número de entradas no chart, a concentração é
+    alta: o 1% com mais entradas responde por quase 10% de todas as posições em
+    76 anos, e a metade "mais presente" da base concentra mais de 80% do total —
+    um padrão consistente com a "economia dos superstars" discutida na literatura de economia da música.
+  </p>
+  <div class="chart-wrap">
+    <canvas id="graficoPareto" role="img" aria-label="Curva de concentracao de Pareto"></canvas>
+    <p class="caption">Curva de concentração das entradas no Hot 100 Year-End, por artista, 1950–2025. Líder: Drake, 44 entradas.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-col" style="max-width:340px">
+        <h4>Sobre este painel</h4>
+        <p>
+          Painel estático, sem coleta de dados do visitante e sem servidor —
+          todos os números vêm dos arquivos em <code>data/</code>, gerados pelos
+          scripts de <code>scripts/</code> a partir da planilha-mestre. TCC
+          defendido em 2026.
+        </p>
+      </div>
+      <div class="footer-col">
+        <h4>Repositório</h4>
+        <div class="footer-links">
+          <a href="../README.md">README do projeto</a>
+          <a href="../scripts/">Scripts do pipeline</a>
+          <a href="../data/">Dados agregados</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Contato</h4>
+        <div class="footer-links">
+          <a href="mailto:mafe.f.pereira@gmail.com">mafe.f.pereira@gmail.com</a>
+          <a href="https://www.linkedin.com/in/mariafernandapereiracarvalho/" target="_blank" rel="noopener">LinkedIn — Maria Fernanda Pereira</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Instituição</h4>
+        <div class="footer-logos">
+          <img src="assets/logo_mba_usp_esalq.png" alt="MBA USP/Esalq">
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>Pereira, M. F. <em>Longevidade comercial de artistas no Billboard Hot 100 (1950–2025)</em>. TCC — MBA em Data Science e Analytics, USP/Esalq, 2026.</span>
+      <span>Dados: Billboard Hot 100 Year-End × Spotify (via Sort Your Music)</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---------------------------------------------------------------------- */
+/* dados                                                                   */
+/* ---------------------------------------------------------------------- */
+const palette = {
+  blue: getVar('--s-blue'), orange: getVar('--s-orange'), aqua: getVar('--s-aqua'),
+  yellow: getVar('--s-yellow'), magenta: getVar('--s-magenta'), green: getVar('--s-green'),
+  violet: getVar('--s-violet'), red: getVar('--s-red'),
+};
+function getVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function ink() { return getVar('--ink'); }
+function inkSoft() { return getVar('--ink-soft'); }
+function muted() { return getVar('--muted'); }
+function line() { return getVar('--line'); }
+function surface1() { return getVar('--surface-1'); }
+
+const top10 = [
+  {artista:"Elton John", estreia:1972, ultimo:2022, carreira:50, hits:28},
+  {artista:"Michael Jackson", estreia:1972, ultimo:2014, carreira:42, hits:25},
+  {artista:"The Isley Brothers", estreia:1962, ultimo:2001, carreira:39, hits:6},
+  {artista:"Santana", estreia:1970, ultimo:2008, carreira:38, hits:9},
+  {artista:"Mariah Carey", estreia:1990, ultimo:2025, carreira:35, hits:36},
+  {artista:"Cher", estreia:1965, ultimo:1999, carreira:34, hits:12},
+  {artista:"Barbra Streisand", estreia:1964, ultimo:1997, carreira:33, hits:12},
+  {artista:"Frankie Valli & The Four Seasons", estreia:1962, ultimo:1994, carreira:32, hits:8},
+  {artista:"Aretha Franklin", estreia:1967, ultimo:1998, carreira:31, hits:15},
+  {artista:"USHER", estreia:1997, ultimo:2024, carreira:27, hits:25},
+];
+
+const descritivas = [
+  {metrica:"BPM", media:119.0, mediana:118.0},
+  {metrica:"Energia", media:60.8, mediana:63.0},
+  {metrica:"Dançabilidade", media:62.2, mediana:64.0},
+  {metrica:"Volume (dB)", media:-8.5, mediana:-8.0},
+  {metrica:"Valência", media:59.6, mediana:62.0},
+  {metrica:"Duração", media:"3:45", mediana:"3:41"},
+  {metrica:"Acústica", media:29.1, mediana:19.0},
+  {metrica:"Popularidade (Spotify, atual)", media:55.2, mediana:59.0},
+];
+
+const clustersK2 = {
+  labels: ["BPM","Energia","Dança","Volume","Valência","Acústica"],
+  grupos: [
+    {nome:"Cluster 1 (acústico/introspectivo)", cor:palette.blue, valores:[114.0,39.1,52.5,-11.7,46.7,59.1]},
+    {nome:"Cluster 2 (energético/dançante)", cor:palette.orange, valores:[121.2,70.5,66.6,-7.0,65.0,15.8]},
+  ]
+};
+const clustersK5 = {
+  labels: ["BPM","Energia","Dança","Volume","Valência","Acústica"],
+  grupos: [
+    {nome:"Cluster 1", cor:palette.blue, valores:[162.2,70.4,50.8,-6.9,56.3,20.5]},
+    {nome:"Cluster 2", cor:palette.orange, valores:[107.3,60.9,62.8,-7.0,37.0,17.2]},
+    {nome:"Cluster 3", cor:palette.aqua, valores:[115.2,52.3,68.0,-11.3,77.2,41.6]},
+    {nome:"Cluster 4", cor:palette.yellow, valores:[108.8,30.6,44.7,-12.6,34.7,71.0]},
+    {nome:"Cluster 5", cor:palette.magenta, valores:[114.3,77.1,72.0,-6.2,76.6,12.0]},
+  ]
+};
+
+/* normaliza cada eixo do radar para 0-100, pra caber num unico radar sem eixo dominar */
+function normalizarRadar(grupos, labels) {
+  const mins = labels.map((_, i) => Math.min(...grupos.map(g => g.valores[i])));
+  const maxs = labels.map((_, i) => Math.max(...grupos.map(g => g.valores[i])));
+  return grupos.map(g => ({
+    ...g,
+    normal: g.valores.map((v, i) => maxs[i] === mins[i] ? 50 : Math.round(((v - mins[i]) / (maxs[i] - mins[i])) * 100)),
+  }));
+}
+
+/* ---------------------------------------------------------------------- */
+/* hero cards                                                              */
+/* ---------------------------------------------------------------------- */
+const heroCards = [
+  {num:"18,52%", label:"dos artistas são cross-geracionais (2+ décadas)", cor:palette.blue},
+  {num:"1 ano", label:"carreira mediana no chart", cor:palette.orange},
+  {num:"64,5%", label:"dos que voltam ao chart tiveram ao menos um hiato", cor:palette.aqua},
+  {num:"0,549", label:"AUC-ROC: o áudio da estreia prevê pouco a longevidade", cor:palette.violet},
+];
+document.getElementById('heroCards').innerHTML = heroCards.map(c => `
+  <div class="card" style="--accent:${c.cor}">
+    <div class="num">${c.num}</div>
+    <div class="label">${c.label}</div>
+  </div>`).join('');
+
+/* ---------------------------------------------------------------------- */
+/* tabela top 10 (ordenavel)                                               */
+/* ---------------------------------------------------------------------- */
+function renderTop10(sortKey = 'carreira', dir = -1) {
+  const linhas = [...top10].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : -1) * dir);
+  const cols = [
+    {key:'artista', label:'Artista', num:false},
+    {key:'estreia', label:'Estreia', num:true},
+    {key:'ultimo', label:'Último hit', num:true},
+    {key:'carreira', label:'Carreira', num:true},
+    {key:'hits', label:'Hits', num:true},
+  ];
+  const thead = `<thead><tr>${cols.map(c => `
+    <th class="${c.num ? 'num' : ''} ${c.key === sortKey ? 'sorted' : ''}" data-key="${c.key}">
+      ${c.label}${c.key === sortKey ? `<span class="arrow">${dir === 1 ? '▲' : '▼'}</span>` : ''}
+    </th>`).join('')}</tr></thead>`;
+  const tbody = `<tbody>${linhas.map(r => `
+    <tr>
+      <td>${r.artista}</td>
+      <td class="num">${r.estreia}</td>
+      <td class="num">${r.ultimo}</td>
+      <td class="num">${r.carreira} anos</td>
+      <td class="num">${r.hits}</td>
+    </tr>`).join('')}</tbody>`;
+  const tabela = document.getElementById('tabelaTop10');
+  tabela.innerHTML = thead + tbody;
+  tabela.querySelectorAll('th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      const novoDir = (key === sortKey) ? -dir : -1;
+      renderTop10(key, novoDir);
+    });
+  });
+}
+renderTop10();
+
+/* tabela descritivas */
+document.getElementById('tabelaDescritivas').innerHTML = `
+  <thead><tr><th>Métrica</th><th class="num">Média</th><th class="num">Mediana</th></tr></thead>
+  <tbody>${descritivas.map(d => `<tr><td>${d.metrica}</td><td class="num">${d.media}</td><td class="num">${d.mediana}</td></tr>`).join('')}</tbody>
+`;
+
+/* ---------------------------------------------------------------------- */
+/* charts                                                                   */
+/* ---------------------------------------------------------------------- */
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+Chart.defaults.color = inkSoft();
+Chart.defaults.borderColor = line();
+
+const charts = {};
+
+function baseTooltip() {
+  return {
+    backgroundColor: surface1(),
+    titleColor: ink(),
+    bodyColor: inkSoft(),
+    borderColor: line(),
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 8,
+    displayColors: false,
+  };
+}
+
+charts.crossGer = new Chart(document.getElementById('graficoCrossGer'), {
+  type: 'bar',
+  data: {
+    labels: ['Cross-geracionais (2+ décadas)', 'Uma década só'],
+    datasets: [{ data: [501, 2705 - 501], backgroundColor: [palette.blue, muted()], borderRadius: 6, maxBarThickness: 90 }]
+  },
+  options: {
+    plugins: { legend: { display: false }, tooltip: baseTooltip() },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'nº de artistas' }, grid: { color: line() } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+const kmLabels = ['0','2','5','10','15','20','25+'];
+const kmValores = [100, 80.6, 73.8, 71.5, 69.8, 69.2, 69.2];
+charts.hiato = new Chart(document.getElementById('graficoHiato'), {
+  type: 'line',
+  data: {
+    labels: kmLabels,
+    datasets: [{
+      label: 'Segue sem reentrada (%)',
+      data: kmValores,
+      borderColor: palette.aqua,
+      backgroundColor: palette.aqua + '22',
+      fill: true, tension: 0.25, pointRadius: 3, pointHoverRadius: 6,
+      pointBackgroundColor: palette.aqua,
+    }]
+  },
+  options: {
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { display: false }, tooltip: { ...baseTooltip(), callbacks: { label: (c) => `${c.parsed.y}% dos hiatos ainda abertos` } } },
+    scales: {
+      x: { title: { display: true, text: 'anos desde o início do hiato' }, grid: { display: false } },
+      y: { min: 60, max: 100, title: { display: true, text: '% dos hiatos sem reentrada' }, grid: { color: line() } }
+    }
+  }
+});
+
+const eraLabels = ['Vinil/Rádio\n1950–1990', 'CD/MTV\n1991–2005', 'Streaming\n2006–2025'];
+charts.duracao = new Chart(document.getElementById('graficoDuracao'), {
+  type: 'bar',
+  data: {
+    labels: ['Vinil/Rádio (1950–90)', 'CD/MTV (1991–2005)', 'Streaming (2006–25)'],
+    datasets: [{ data: [3*60+34, 4*60+19, 3*60+38], backgroundColor: [palette.blue, palette.orange, palette.aqua], borderRadius: 6, maxBarThickness: 70 }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...baseTooltip(), callbacks: { label: (c) => `${Math.floor(c.parsed.y/60)}:${String(c.parsed.y%60).padStart(2,'0')}` } }
+    },
+    scales: {
+      y: { title: { display: true, text: 'duração média (segundos)' }, grid: { color: line() },
+           ticks: { callback: (v) => `${Math.floor(v/60)}:${String(v%60).padStart(2,'0')}` } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+function montarRadar(grupos, labels) {
+  const norm = normalizarRadar(grupos, labels);
+  return {
+    labels,
+    datasets: norm.map(g => ({
+      label: g.nome,
+      data: g.normal,
+      borderColor: g.cor,
+      backgroundColor: g.cor + '26',
+      pointBackgroundColor: g.cor,
+      borderWidth: 2,
+    }))
+  };
+}
+charts.clusters = new Chart(document.getElementById('graficoClusters'), {
+  type: 'radar',
+  data: montarRadar(clustersK2.grupos, clustersK2.labels),
+  options: {
+    plugins: {
+      legend: { position: 'bottom', labels: { color: inkSoft(), usePointStyle: true } },
+      tooltip: {
+        ...baseTooltip(),
+        callbacks: {
+          label: (c) => {
+            const grupos = (document.querySelector('#clusterToggle button.active').dataset.k === '2') ? clustersK2.grupos : clustersK5.grupos;
+            const valorReal = grupos[c.datasetIndex].valores[c.dataIndex];
+            return `${c.dataset.label}: ${valorReal} (escala normalizada p/ comparação)`;
+          }
+        }
+      }
+    },
+    scales: {
+      r: {
+        angleLines: { color: line() },
+        grid: { color: line() },
+        pointLabels: { color: inkSoft(), font: { size: 11 } },
+        ticks: { display: false },
+      }
+    }
+  }
+});
+document.getElementById('clusterToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  document.querySelectorAll('#clusterToggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const k = btn.dataset.k;
+  const dados = k === '2' ? clustersK2 : clustersK5;
+  document.getElementById('clusterTitle').textContent = `Clusters sonoros — perfil médio de cada grupo (k=${k})`;
+  charts.clusters.data = montarRadar(dados.grupos, dados.labels);
+  charts.clusters.update();
+});
+
+const importancia = [
+  {v:'Duração', n:0.128}, {v:'BPM', n:0.124}, {v:'Posição de estreia', n:0.117},
+  {v:'Energia', n:0.115}, {v:'Popularidade', n:0.115}, {v:'Valência', n:0.113},
+  {v:'Dançabilidade', n:0.109}, {v:'Acústica', n:0.106}, {v:'Volume', n:0.073},
+];
+charts.importancia = new Chart(document.getElementById('graficoImportancia'), {
+  type: 'bar',
+  data: {
+    labels: importancia.map(d => d.v),
+    datasets: [{ data: importancia.map(d => d.n), backgroundColor: palette.violet, borderRadius: 5 }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false }, tooltip: baseTooltip() },
+    scales: {
+      x: { title: { display: true, text: 'importância (MDI)' }, grid: { color: line() } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+charts.auc = new Chart(document.getElementById('graficoAUC'), {
+  type: 'bar',
+  data: {
+    labels: ['Random Forest\n(500 árvores)', 'Árvore de decisão\n(profundidade 3)', 'Acaso'],
+    datasets: [{ data: [0.549, 0.531, 0.5], backgroundColor: [palette.violet, palette.blue, muted()], borderRadius: 6, maxBarThickness: 70 }]
+  },
+  options: {
+    plugins: { legend: { display: false }, tooltip: baseTooltip() },
+    scales: {
+      y: { min: 0.4, max: 0.7, title: { display: true, text: 'AUC-ROC' }, grid: { color: line() } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+charts.pareto = new Chart(document.getElementById('graficoPareto'), {
+  type: 'bar',
+  data: {
+    labels: ['Topo 1%\n(27 artistas)', 'Topo 10%\n(270 artistas)', 'Metade com\nmais entradas'],
+    datasets: [{ data: [9.9, 40.8, 80.9], backgroundColor: [palette.red, palette.orange, palette.yellow], borderRadius: 6, maxBarThickness: 90 }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...baseTooltip(), callbacks: { label: (c) => `${c.parsed.y}% do total de posições` } }
+    },
+    scales: {
+      y: { min: 0, max: 100, title: { display: true, text: '% do total de posições' }, grid: { color: line() } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+/* ---------------------------------------------------------------------- */
+/* nav ativa + tema                                                        */
+/* ---------------------------------------------------------------------- */
+const secoes = [...document.querySelectorAll('main section')];
+const links = [...document.querySelectorAll('nav.tabs a')];
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+    }
+  });
+}, { rootMargin: '-40% 0px -55% 0px' });
+secoes.forEach(s => obs.observe(s));
+
+function repintarCharts() {
+  Chart.defaults.color = inkSoft();
+  Chart.defaults.borderColor = line();
+  Object.values(charts).forEach(c => {
+    if (c.options.scales) {
+      Object.values(c.options.scales).forEach(sc => {
+        if (sc.grid) sc.grid.color = line();
+      });
+    }
+    c.update();
+  });
+}
+
+const themeToggle = document.getElementById('themeToggle');
+let temaAtual = null;
+try { temaAtual = localStorage.getItem('tccTema'); } catch (e) {}
+if (temaAtual) document.documentElement.setAttribute('data-theme', temaAtual);
+themeToggle.addEventListener('click', () => {
+  const atual = document.documentElement.getAttribute('data-theme')
+    || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const novo = atual === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', novo);
+  try { localStorage.setItem('tccTema', novo); } catch (e) {}
+  setTimeout(repintarCharts, 10);
+});
+</script>
+
+</body>
+</html>
